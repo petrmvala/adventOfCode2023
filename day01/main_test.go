@@ -19,6 +19,18 @@ func TestLineMatch(t *testing.T) {
 		{"pqr3stu8vwx", 38},
 		{"a1b2c3d4e5f", 15},
 		{"treb7uchet", 77},
+		{"two1nine", 29},
+		{"eightwothree", 83},
+		{"abcone2threexyz", 13},
+		{"xtwone3four", 24},
+		{"4nineeightseven2", 42},
+		{"zoneight234", 14},
+		{"7pqrstsixteen", 76},
+		{"7pqrstsizeron", 77},
+		{"one", 11},
+		{"xhzone6", 16},
+		{"gkhpvkeightsixronethreeone2", 82},
+		{"5eight34sckhhxrtwonem", 51},
 	}
 
 	for _, tt := range cases {
