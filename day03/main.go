@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"unicode"
 )
@@ -13,76 +15,105 @@ type Candidate struct {
 	x_end   int
 }
 
-func sum(schematic string) int {
-	var (
-		buf        string
-		buffering  bool = false
-		prevPool   []Candidate
-		thisPool   []Candidate
-		prevSymbol []int
-		thisSymbol []int
-		pos_x      int = 0
-	)
-	fmt.Println(schematic)
-	for _, s := range schematic {
-		pos_x++
-		fmt.Printf(" %q ", s)
-		switch {
-		case unicode.IsDigit(s):
-			buf += string(s)
-			buffering = true
-		case s == '.':
-			if buffering {
-				saveInt(&thisPool, pos_x, &buf, &buffering)
-			}
-		case s == '\n':
-			if buffering {
-				saveInt(&thisPool, pos_x, &buf, &buffering)
-			}
-			pos_x = 0
-			fmt.Printf("prevPool: %v, thisPool: %v, prevSymbol: %v, thisSymbol: %v\n", prevPool, thisPool, prevSymbol, thisSymbol)
-			// check prevPool with thisSymbol
-			// check thisPool with thisSymbol
-			// check thisPool with prevSymbol
-			prevPool = thisPool
-			thisPool = []Candidate{}
-			prevSymbol = thisSymbol
-			thisSymbol = []int{}
-		default:
-			if buffering {
-				saveInt(&thisPool, pos_x, &buf, &buffering)
-			}
-			thisSymbol = append(thisSymbol, pos_x)
-		}
+func main() {
+
+	readFile, err := os.Open("data.txt")
+	if err != nil {
+		log.Fatalln(err)
 	}
-	return 0
+	defer readFile.Close()
+
+	s := bufio.NewScanner(readFile)
+	s.Split(bufio.ScanLines)
+
+	var schema string
+
+	for s.Scan() {
+		schema += s.Text()
+	}
+
+	fmt.Println("result: ", sum(schema))
 }
 
-// func validatePool(pool []Candidate, symbols []int) int {
-// 	sum := 0
-// 	for _, p := range pool {
-// 		// These will never be used as indices so it's ok to get out of bounds
-// 		p_min := p.x_start-1
-// 		p_max := p.x_end+1
-// 		for _, s := range symbols {
-// 			if p_min <= s && s <= p_max {
+func sum(schematic string) int {
+	var (
+		valid               bool
+		pos_x, sum          int
+		buffer              string
+		abovePool, thisPool []Candidate
+	)
+	thisSymbol := make(map[int]bool)
+	aboveSymbol := thisSymbol
 
-// 			}
-// 		}
-// 	}
-// 	return 0
-// }
-
-func saveInt(pool *[]Candidate, x_position int, buffer *string, buffering *bool) {
-	tmp, err := strconv.Atoi(*buffer)
-	if err != nil {
-		log.Fatal(err)
+	pos_x = -1
+	for _, s := range schematic {
+		pos_x++
+		// fmt.Printf(" %q ", s)
+		switch {
+		case unicode.IsDigit(s):
+			buffer += string(s)
+			if aboveSymbol[pos_x] {
+				valid = true
+			}
+		case s == '.':
+			if len(buffer) > 0 {
+				if aboveSymbol[pos_x] {
+					valid = true
+				}
+				c := getCandidate(buffer, pos_x-1)
+				buffer = ""
+				if valid {
+					sum += c.value
+				} else {
+					thisPool = append(thisPool, c)
+				}
+			}
+			valid = aboveSymbol[pos_x]
+		case s == '\n':
+			if len(buffer) > 0 {
+				c := getCandidate(buffer, pos_x-1)
+				buffer = ""
+				if valid {
+					sum += c.value
+				} else {
+					thisPool = append(thisPool, c)
+				}
+			}
+			abovePool, thisPool = thisPool, []Candidate{}
+			aboveSymbol, thisSymbol = thisSymbol, map[int]bool{}
+			valid = false
+			pos_x = -1
+		default:
+			thisSymbol[pos_x] = true
+			valid = true
+			if len(buffer) > 0 {
+				c := getCandidate(buffer, pos_x-1)
+				buffer = ""
+				sum += c.value
+			}
+			for _, c := range abovePool {
+				if c.x_start > pos_x {
+					continue
+				}
+				if c.x_end+1 < pos_x-1 {
+					break
+				}
+				sum += c.value
+			}
+		}
 	}
-	*pool = append(*pool, Candidate{
+
+	return sum
+}
+
+func getCandidate(s string, pos_x int) Candidate {
+	tmp, err := strconv.Atoi(s)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return Candidate{
 		value:   tmp,
-		x_start: x_position - len(*buffer),
-		x_end:   x_position - 1,
-	})
-	*buffer = ""
-	*buffering = false
+		x_start: pos_x - len(s),
+		x_end:   pos_x,
+	}
 }
