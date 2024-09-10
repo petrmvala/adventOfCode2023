@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 	"unicode"
 )
 
@@ -29,10 +30,17 @@ func main() {
 	var schema string
 
 	for s.Scan() {
-		schema += s.Text()
+		schema += fmt.Sprintln(s.Text()) // Println will add back the final '\n'
+	}
+	if err := s.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
 
-	fmt.Println("result: ", sum(schema))
+	start := time.Now()
+	sum := sum(schema)
+	timeElapsed := time.Since(start)
+	fmt.Println("result: ", sum, "\ntime elapsed: ", timeElapsed)
+
 }
 
 func sum(schematic string) int {
@@ -48,7 +56,6 @@ func sum(schematic string) int {
 	pos_x = -1
 	for _, s := range schematic {
 		pos_x++
-		// fmt.Printf(" %q ", s)
 		switch {
 		case unicode.IsDigit(s):
 			buffer += string(s)
@@ -92,11 +99,11 @@ func sum(schematic string) int {
 				sum += c.value
 			}
 			for _, c := range abovePool {
-				if c.x_start > pos_x {
+				if c.x_start-1 > pos_x {
 					continue
 				}
-				if c.x_end+1 < pos_x-1 {
-					break
+				if c.x_end+1 < pos_x {
+					continue
 				}
 				sum += c.value
 			}
@@ -113,7 +120,7 @@ func getCandidate(s string, pos_x int) Candidate {
 	}
 	return Candidate{
 		value:   tmp,
-		x_start: pos_x - len(s),
+		x_start: pos_x - (len(s) - 1),
 		x_end:   pos_x,
 	}
 }
